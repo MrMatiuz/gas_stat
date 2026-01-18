@@ -1,10 +1,15 @@
-import { deleteRecord, getRecords } from '../utils/storage';
+import { deleteRecord } from '../utils/storage';
 
-const ExpensesTable = ({ records, onDelete }) => {
-  const handleDelete = (id) => {
+const ExpensesTable = ({ records, onDelete, userId }) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Вы уверены, что хотите удалить эту запись?')) {
-      deleteRecord(id);
-      onDelete();
+      try {
+        await deleteRecord(id, userId);
+        onDelete();
+      } catch (error) {
+        console.error('Error deleting record:', error);
+        alert('Ошибка при удалении записи');
+      }
     }
   };
 
@@ -19,16 +24,21 @@ const ExpensesTable = ({ records, onDelete }) => {
 
   // Группировка по машинам
   const groupedByCar = records.reduce((acc, record) => {
-    if (!acc[record.car]) {
-      acc[record.car] = [];
+    const carName = record.car || 'Неизвестная машина';
+    if (!acc[carName]) {
+      acc[carName] = [];
     }
-    acc[record.car].push(record);
+    acc[carName].push(record);
     return acc;
   }, {});
 
   // Сортировка записей по дате (новые сверху)
   Object.keys(groupedByCar).forEach(car => {
-    groupedByCar[car].sort((a, b) => new Date(b.date) - new Date(a.date));
+    groupedByCar[car].sort((a, b) => {
+      const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
+      const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+      return dateB - dateA;
+    });
   });
 
   return (
@@ -52,9 +62,11 @@ const ExpensesTable = ({ records, onDelete }) => {
               </thead>
               <tbody>
                 {groupedByCar[car].map((record) => {
+                  const recordDate = record.date?.toDate ? record.date.toDate() : new Date(record.date);
+                  
                   return (
                     <tr key={record.id}>
-                      <td>{new Date(record.date).toLocaleDateString('ru-RU')}</td>
+                      <td>{recordDate.toLocaleDateString('ru-RU')}</td>
                       <td>{record.mileage.toLocaleString('ru-RU')}</td>
                       <td>{record.liters.toFixed(2)}</td>
                       <td>{record.pricePerLiter.toFixed(2)}</td>

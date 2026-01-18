@@ -9,14 +9,15 @@ const Statistics = ({ records }) => {
   }
 
   // Общая статистика
-  const totalLiters = records.reduce((sum, r) => sum + r.liters, 0);
-  const totalPrice = records.reduce((sum, r) => sum + r.totalPrice, 0);
+  const totalLiters = records.reduce((sum, r) => sum + (r.liters || 0), 0);
+  const totalPrice = records.reduce((sum, r) => sum + (r.totalPrice || 0), 0);
   const avgPricePerLiter = totalLiters > 0 ? totalPrice / totalLiters : 0;
 
   // Статистика по машинам
   const statsByCar = records.reduce((acc, record) => {
-    if (!acc[record.car]) {
-      acc[record.car] = {
+    const carName = record.car || 'Неизвестная машина';
+    if (!acc[carName]) {
+      acc[carName] = {
         liters: 0,
         totalPrice: 0,
         records: [],
@@ -24,11 +25,11 @@ const Statistics = ({ records }) => {
         maxMileage: 0
       };
     }
-    acc[record.car].liters += record.liters;
-    acc[record.car].totalPrice += record.totalPrice;
-    acc[record.car].records.push(record);
-    acc[record.car].minMileage = Math.min(acc[record.car].minMileage, record.mileage);
-    acc[record.car].maxMileage = Math.max(acc[record.car].maxMileage, record.mileage);
+    acc[carName].liters += record.liters || 0;
+    acc[carName].totalPrice += record.totalPrice || 0;
+    acc[carName].records.push(record);
+    acc[carName].minMileage = Math.min(acc[carName].minMileage, record.mileage || 0);
+    acc[carName].maxMileage = Math.max(acc[carName].maxMileage, record.mileage || 0);
     return acc;
   }, {});
 
@@ -92,7 +93,10 @@ const Statistics = ({ records }) => {
                 <div className="stat-item">
                   <label>Пробег</label>
                   <div className="value">
-                    {carStats.minMileage.toLocaleString('ru-RU')} - {carStats.maxMileage.toLocaleString('ru-RU')} км
+                    {carStats.minMileage !== Infinity 
+                      ? `${carStats.minMileage.toLocaleString('ru-RU')} - ${carStats.maxMileage.toLocaleString('ru-RU')} км`
+                      : '-'
+                    }
                   </div>
                 </div>
                 <div className="stat-item">

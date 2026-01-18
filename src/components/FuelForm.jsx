@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getCarsList } from '../utils/storage';
 
 const FuelForm = ({ onAdd, carsList = [] }) => {
   const [availableCars, setAvailableCars] = useState([]);
   
   useEffect(() => {
-    const cars = getCarsList();
-    setAvailableCars(cars);
+    setAvailableCars(carsList);
   }, [carsList]);
 
   const [formData, setFormData] = useState({

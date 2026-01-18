@@ -1,52 +1,83 @@
 import { useState, useEffect } from 'react';
 import { getCars, addCar, deleteCar } from '../utils/storage';
 
-const CarsManagement = ({ onCarsChange }) => {
+const CarsManagement = ({ onCarsChange, userId }) => {
   const [cars, setCars] = useState([]);
   const [newCarName, setNewCarName] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (userId) {
     loadCars();
-  }, []);
+    }
+  }, [userId]);
 
-  const loadCars = () => {
-    const data = getCars();
+  const loadCars = async () => {
+    if (!userId) return;
+    
+    try {
+      const data = await getCars(userId);
     setCars(data);
     if (onCarsChange) {
       onCarsChange();
+      }
+    } catch (error) {
+      console.error('Error loading cars:', error);
+      setError('Ошибка при загрузке машин');
     }
   };
 
-  const handleAddCar = (e) => {
+  const handleAddCar = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     if (!newCarName.trim()) {
       setError('Введите название машины');
+      setLoading(false);
       return;
     }
 
-    const result = addCar(newCarName);
+    if (!userId) {
+      setError('Пользователь не авторизован');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const result = await addCar(newCarName, userId);
     
     if (result === null) {
       setError('Машина с таким названием уже существует');
+        setLoading(false);
       return;
     }
 
     setNewCarName('');
-    loadCars();
+      await loadCars();
+    } catch (error) {
+      console.error('Error adding car:', error);
+      setError('Ошибка при добавлении машины');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteCar = (id) => {
+  const handleDeleteCar = async (id) => {
     const car = cars.find(c => c.id === id);
     if (!car) return;
 
     if (window.confirm(`Вы уверены, что хотите удалить машину "${car.name}"?\n\nВнимание: все записи о заправках для этой машины также будут удалены.`)) {
-      deleteCar(id);
-      loadCars();
+      try {
+        await deleteCar(id, userId);
+        await loadCars();
       if (onCarsChange) {
         onCarsChange();
+        }
+      } catch (error) {
+        console.error('Error deleting car:', error);
+        alert('Ошибка при удалении машины');
       }
     }
   };
@@ -71,11 +102,12 @@ const CarsManagement = ({ onCarsChange }) => {
                 }}
                 placeholder="Например: Toyota Camry"
                 required
+                disabled={loading}
               />
               {error && <p style={{ color: '#f5576c', marginTop: '5px', fontSize: '0.9rem' }}>{error}</p>}
             </div>
-            <button type="submit" className="btn">
-              Добавить машину
+            <button type="submit" className="btn" disabled={loading}>
+              {loading ? 'Добавление...' : 'Добавить машину'}
             </button>
           </form>
         </div>
@@ -103,11 +135,12 @@ const CarsManagement = ({ onCarsChange }) => {
               }}
               placeholder="Например: Toyota Camry"
               required
+              disabled={loading}
             />
             {error && <p style={{ color: '#f5576c', marginTop: '5px', fontSize: '0.9rem' }}>{error}</p>}
           </div>
-          <button type="submit" className="btn">
-            Добавить машину
+          <button type="submit" className="btn" disabled={loading}>
+            {loading ? 'Добавление...' : 'Добавить машину'}
           </button>
         </form>
       </div>
@@ -130,11 +163,19 @@ const CarsManagement = ({ onCarsChange }) => {
                     <strong style={{ color: '#667eea', fontSize: '1.1rem' }}>{car.name}</strong>
                   </td>
                   <td>
-                    {new Date(car.createdAt).toLocaleDateString('ru-RU', {
+                    {car.createdAt?.toDate 
+                      ? new Date(car.createdAt.toDate()).toLocaleDateString('ru-RU', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : car.createdAt 
+                        ? new Date(car.createdAt).toLocaleDateString('ru-RU', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
-                    })}
+                          })
+                        : '-'}
                   </td>
                   <td>
                     <button
